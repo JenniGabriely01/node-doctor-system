@@ -3,17 +3,16 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+require('dotenv').config(); // Para carregar variáveis de ambiente
 
 const app = express();
 const PORT = 3000;
-/* Porta do banco de dados */
 const MONGO_URI = 'mongodb://localhost:27017/mydatabase';
 
 app.use(cors());
 app.use(bodyParser.json());
 
-
-/* Conexão com o banco de dados */
 mongoose.connect(MONGO_URI, {
     useUnifiedTopology: true
 })
@@ -25,7 +24,6 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }
 });
 
-// Middleware para criptografar a senha antes de salvar
 userSchema.pre('save', async function(next) {
     const user = this;
     if (user.isModified('password')) {
@@ -36,10 +34,9 @@ userSchema.pre('save', async function(next) {
 
 const User = mongoose.model('User', userSchema);
 
-/* Criar usuário pré cadastrado */
 async function criarUsuario() {
     const email = 'admin@example.com';
-    const plainPassword = 'adminpassword'
+    const plainPassword = 'adminpassword';
 
     try {
         const existingUser = await User.findOne({ email });
@@ -73,7 +70,8 @@ app.post('/login', async (req, res) => {
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (isPasswordValid) {
-            res.status(200).json({ message: 'Login bem-sucedido' });
+            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            res.status(200).json({ message: 'Login bem-sucedido', token });
         } else {
             res.status(400).json({ error: 'Email ou senha incorretos' });
         }
@@ -83,6 +81,34 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// Middleware para verificar o token JWT
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) return res.status(401).json({ error: 'Token não fornecido' });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Token inválido' });
+        req.user = user;
+        next();
+    });
+}
+
+// Rota pública
+app.get('/public', (req, res) => {
+    res.status(200).json({ message: 'Essa é uma rota pública' });
+});
+
+// Rota protegida
+app.get('/protected', authenticateToken, (req, res) => {
+    res.status(200).json({ message: 'Acesso concedido', user: req.user });
+});
+
+// Rota protegida com autenticação
+app.get('/home', authenticateToken, (req, res) => {
+    res.status(200).json({ message: 'Essa é uma rota protegida' });
+});
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
