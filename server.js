@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
@@ -22,6 +23,16 @@ mongoose.connect(MONGO_URI, {
 })
 .then(() => console.log('Conectado ao MongoDB'))
 .catch(err => console.error('Erro ao conectar ao MongoDB', err));
+
+/* Definindo o schema do Cliente */
+const clienteSchema = new mongoose.Schema({
+    nome: { type: String, required: true },
+    sobrenome: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    telefone: { type: String, required: true },
+});
+/* Criando o modelo Cliente */
+const Cliente = mongoose.model('Cliente', clienteSchema);
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
@@ -57,11 +68,6 @@ async function criarUsuario() {
 
 criarUsuario();
 
-// Rota de teste
-app.get('/testeApi', (req, res) => {
-    res.json({ message: 'API funcionando corretamente!' });
-});
-
 // Rota de login
 app.post('/login', [
     body('email').isEmail().withMessage('Email inválido'),
@@ -92,6 +98,29 @@ app.post('/login', [
         res.status(500).json({ error: 'Erro ao autenticar usuário' });
     }
 });
+
+/* Rota para cadastrar cliente */
+router.post('/api/clientes', async (req, res) => {
+    const { nome, sobrenome, email, telefone } = req.body;
+    try {
+        const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
+        await novoCliente.save();
+        res.status(201).json(novoCliente);
+    } catch (error) {
+        res.status(400).json({ message: "Erro ao cadastrar cliente", error });
+    }
+});
+/* Rota para obter clientes */
+router.get("/api/clientes", async (req, res) => {
+    try {
+        const clientes = await Cliente.find();
+        res.status(200).json(clientes);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar clientes', error });
+    }
+});
+/* Usando o router */
+app.use(router);
 
 // Inicia o servidor
 app.listen(PORT, () => {
