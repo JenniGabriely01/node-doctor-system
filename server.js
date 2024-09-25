@@ -30,7 +30,8 @@ const clienteSchema = new mongoose.Schema({
     sobrenome: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     telefone: { type: String, required: true },
-});
+}, { timestamps: true });  // Adiciona timestamps automáticos
+
 /* Criando o modelo Cliente */
 const Cliente = mongoose.model('Cliente', clienteSchema);
 
@@ -104,12 +105,14 @@ router.post('/api/clientes', async (req, res) => {
     const { nome, sobrenome, email, telefone } = req.body;
     try {
         const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
-        await novoCliente.save();
+        await novoCliente.save();  // Campos createdAt e updatedAt são gerados automaticamente
         res.status(201).json(novoCliente);
     } catch (error) {
         res.status(400).json({ message: "Erro ao cadastrar cliente", error });
     }
 });
+
+
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
     try {
