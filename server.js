@@ -21,26 +21,38 @@ mongoose.connect(MONGO_URI, {
     useUnifiedTopology: true,
     useNewUrlParser: true
 })
-.then(() => console.log('Conectado ao MongoDB'))
-.catch(err => console.error('Erro ao conectar ao MongoDB', err));
+    .then(() => console.log('Conectado ao MongoDB'))
+    .catch(err => console.error('Erro ao conectar ao MongoDB', err));
 
 /* Definindo o schema do Cliente */
 const clienteSchema = new mongoose.Schema({
     nome: { type: String, required: true },
     sobrenome: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    telefone: { type: String, required: true },
-}, { timestamps: true });  // Adiciona timestamps automáticos
+    telefone: { type: Number, required: true },
+}, { timestamps: true });
+
+/* Definindo o schema do Livro */
+const livroSchema = new mongoose.Schema({
+    nomeLivro: { type: String, required: true },
+    autor: { type: String, required: true },
+    genero: { type: String, required: true },
+    dataLancamento: { type: Date, required: true },  // Alterado para Date
+    qtdCopias: { type: Number, required: true },     // Alterado para Number
+});
 
 /* Criando o modelo Cliente */
 const Cliente = mongoose.model('Cliente', clienteSchema);
+
+/* Criando o modelo do Livro */
+const Livro = mongoose.model('Livro', livroSchema);
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true }
 });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
     }
@@ -105,13 +117,12 @@ router.post('/api/clientes', async (req, res) => {
     const { nome, sobrenome, email, telefone } = req.body;
     try {
         const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
-        await novoCliente.save();  // Campos createdAt e updatedAt são gerados automaticamente
+        await novoCliente.save();
         res.status(201).json(novoCliente);
     } catch (error) {
         res.status(400).json({ message: "Erro ao cadastrar cliente", error });
     }
 });
-
 
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
@@ -122,6 +133,33 @@ router.get("/api/clientes", async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar clientes', error });
     }
 });
+
+/* Rota para cadastrar livro */
+router.post('/api/livros', async (req, res) => {
+    const { nomeLivro, autor, genero, dataLancamento, qtdCopias } = req.body;
+    
+    // Verificando os dados recebidos
+    console.log('Dados recebidos no POST /api/livros:', req.body);
+
+    try {
+        const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias });
+        await novoLivro.save();
+        res.status(201).json(novoLivro);
+    } catch (error) {
+        res.status(400).json({ message: "Erro ao cadastrar livro", error });
+    }
+});
+
+/* Rota para obter livros */
+router.get("/api/livros", async (req, res) => {
+    try {
+        const livros = await Livro.find();
+        res.status(200).json(livros);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar livros', error });
+    }
+});
+
 /* Usando o router */
 app.use(router);
 
