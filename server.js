@@ -37,8 +37,9 @@ const livroSchema = new mongoose.Schema({
     nomeLivro: { type: String, required: true },
     autor: { type: String, required: true },
     genero: { type: String, required: true },
-    dataLancamento: { type: Date, required: true },  // Alterado para Date
-    qtdCopias: { type: Number, required: true },     // Alterado para Number
+    dataLancamento: { type: Date, required: true }, 
+    qtdCopias: { type: Number, required: true }, 
+    image: { type: String, required: true },
 });
 
 /* Criando o modelo Cliente */
@@ -136,13 +137,13 @@ router.get("/api/clientes", async (req, res) => {
 
 /* Rota para cadastrar livro */
 router.post('/api/livros', async (req, res) => {
-    const { nomeLivro, autor, genero, dataLancamento, qtdCopias } = req.body;
-    
+    const { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
+
     // Verificando os dados recebidos
     console.log('Dados recebidos no POST /api/livros:', req.body);
 
     try {
-        const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias });
+        const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias, image });
         await novoLivro.save();
         res.status(201).json(novoLivro);
     } catch (error) {
