@@ -127,8 +127,16 @@ router.post('/api/clientes', async (req, res) => {
 
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
+  const { limit } = req.query; 
     try {
-        const clientes = await Cliente.find();
+        let clientes;
+        // Se "limit" estiver definido, limitamos o número de clientes
+        //  A função .sort({ createdAt: -1 }) organiza os clientes pelo campo de criação em ordem decrescente
+        if (limit) {
+          clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
+        } else {
+          clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
+        }
         res.status(200).json(clientes);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar clientes', error });
