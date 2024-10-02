@@ -143,6 +143,33 @@ router.get("/api/clientes", async (req, res) => {
     }
 });
 
+/* Rota para buscar clientes */
+router.get("/api/clientes", async (req, res) => {
+    const { search } = req.query; // Obtém o termo de busca
+
+    try {
+        let query = {}; // Inializamos a query vazia
+
+        // Se o termo de busca for concedido, adicionamos na query
+        if (search) {
+            query = {
+                $or: [
+                    {nome: {$regex: search, $options: 'i'} }, // Busca por nome
+                    {sobrenome: {$regex: search, $options: 'i'} }, // Busca por sobrenome
+                    {email: {$regex: search, $options: 'i'} }, // Busca por email
+                ]
+            };
+        }
+
+        // Consultamos o banco de dados com a query montada
+        const clientes = await Cliente.find(query).sort({ createAt: -1 }); // Organiza por data de criação em ordem decrescente
+
+        res.status(200).json(clientes);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar clientes', error });
+    }
+});
+
 /* Rota para cadastrar livro */
 router.post('/api/livros', async (req, res) => {
     const { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
@@ -163,6 +190,33 @@ router.post('/api/livros', async (req, res) => {
 router.get("/api/livros", async (req, res) => {
     try {
         const livros = await Livro.find();
+        res.status(200).json(livros);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar livros', error });
+    }
+});
+
+/* Rota para buscar livros */
+router.get("/api/livros", async (req, res) => {
+    const { search } = req.query; // Obtém o termo de busca
+
+    try {
+        let query = {}; // Inializamos a query vazia
+
+        // Se o termo de busca for concedido, adicionamos na query
+        if (search) {
+            query = {
+                $or: [
+                    {nomeLivro: {$regex: search, $options: 'i'} }, // Busca por nome do livro
+                    {autor: {$regex: search, $options: 'i'} }, // Busca por autor do livro
+                    {genero: {$regex: search, $options: 'i'} }, // Busca por genero do livro
+                ]
+            };
+        }
+
+        // Consultamos o banco de dados com a query montada
+        const livros = await Livro.find(query).sort({ createAt: -1 }); // Organiza por data de criação em ordem decrescente
+
         res.status(200).json(livros);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar livros', error });
