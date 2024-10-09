@@ -138,7 +138,7 @@ router.post('/api/clientes', async (req, res) => {
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
     const { limit } = req.query;
-    const { limit } = req.query;
+    
     try {
         let clientes;
         // Se "limit" estiver definido, limitamos o número de clientes
