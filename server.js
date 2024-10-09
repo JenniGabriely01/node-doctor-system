@@ -37,9 +37,10 @@ const livroSchema = new mongoose.Schema({
     nomeLivro: { type: String, required: true },
     autor: { type: String, required: true },
     genero: { type: String, required: true },
-    dataLancamento: { type: Date, required: true }, 
-    qtdCopias: { type: Number, required: true }, 
+    dataLancamento: { type: Date, required: true },
+    qtdCopias: { type: Number, required: true },
     image: { type: String, required: true },
+    emprestado: { type: Boolean, default: false }, /* adicionando para empréstimo */
 });
 
 /* Criando o modelo Cliente */
@@ -127,15 +128,15 @@ router.post('/api/clientes', async (req, res) => {
 
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
-  const { limit } = req.query; 
+    const { limit } = req.query;
     try {
         let clientes;
         // Se "limit" estiver definido, limitamos o número de clientes
         //  A função .sort({ createdAt: -1 }) organiza os clientes pelo campo de criação em ordem decrescente
         if (limit) {
-          clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
+            clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
         } else {
-          clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
+            clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
         }
         res.status(200).json(clientes);
     } catch (error) {
@@ -154,9 +155,9 @@ router.get("/api/clientes", async (req, res) => {
         if (search) {
             query = {
                 $or: [
-                    {nome: {$regex: search, $options: 'i'} }, // Busca por nome
-                    {sobrenome: {$regex: search, $options: 'i'} }, // Busca por sobrenome
-                    {email: {$regex: search, $options: 'i'} }, // Busca por email
+                    { nome: { $regex: search, $options: 'i' } }, // Busca por nome
+                    { sobrenome: { $regex: search, $options: 'i' } }, // Busca por sobrenome
+                    { email: { $regex: search, $options: 'i' } }, // Busca por email
                 ]
             };
         }
@@ -207,9 +208,9 @@ router.get("/api/livros", async (req, res) => {
         if (search) {
             query = {
                 $or: [
-                    {nomeLivro: {$regex: search, $options: 'i'} }, // Busca por nome do livro
-                    {autor: {$regex: search, $options: 'i'} }, // Busca por autor do livro
-                    {genero: {$regex: search, $options: 'i'} }, // Busca por genero do livro
+                    { nomeLivro: { $regex: search, $options: 'i' } }, // Busca por nome do livro
+                    { autor: { $regex: search, $options: 'i' } }, // Busca por autor do livro
+                    { genero: { $regex: search, $options: 'i' } }, // Busca por genero do livro
                 ]
             };
         }
@@ -220,6 +221,28 @@ router.get("/api/livros", async (req, res) => {
         res.status(200).json(livros);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar livros', error });
+    }
+});
+
+/* rota Nath-quantidade de livros cadastrados */
+
+router.get('/api/livros/count', async (req, res) => {
+    try {
+        const count = await Livro.countDocuments();
+        res.status(200).json({ count });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao contar livros', error });
+    }
+});
+
+/* rota para livros emprestados -Nath */
+
+router.get('/api/livros/emprestados/count', async (req, res) => {
+    try {
+        const count = await Livro.countDocuments({ emprestado: true }); // Conta livros onde "emprestado" é true
+        res.status(200).json({ count });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao contar livros emprestados', error });
     }
 });
 
