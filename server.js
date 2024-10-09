@@ -187,43 +187,41 @@ router.post('/api/livros', async (req, res) => {
     }
 });
 
-/* Rota para obter livros */
-router.get("/api/livros", async (req, res) => {
-    try {
-        const livros = await Livro.find();
-        res.status(200).json(livros);
-    } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar livros', error });
-    }
-});
-
-/* Rota para buscar livros */
 router.get("/api/livros", async (req, res) => {
     const { search } = req.query; // Obtém o termo de busca
+    console.log(`Recebido termo de busca: ${search}`);  // Log do termo recebido
 
     try {
-        let query = {}; // Inializamos a query vazia
+        let query = {}; // Inicializamos a query vazia
 
-        // Se o termo de busca for concedido, adicionamos na query
+        // Se o termo de busca for fornecido, adicionamos na query
         if (search) {
             query = {
                 $or: [
+<<<<<<< HEAD
                     { nomeLivro: { $regex: search, $options: 'i' } }, // Busca por nome do livro
                     { autor: { $regex: search, $options: 'i' } }, // Busca por autor do livro
                     { genero: { $regex: search, $options: 'i' } }, // Busca por genero do livro
+=======
+                    { nomeLivro: { $regex: search, $options: 'i' } },  // Busca por nome do livro
+                    { autor: { $regex: search, $options: 'i' } },      // Busca por autor
+                    { genero: { $regex: search, $options: 'i' } },     // Busca por gênero
+>>>>>>> 8be173115f08aee35956b656b347e689343cbe77
                 ]
             };
         }
 
-        // Consultamos o banco de dados com a query montada
-        const livros = await Livro.find(query).sort({ createAt: -1 }); // Organiza por data de criação em ordem decrescente
-
+        console.log(`Query final:`, query); // Log da query final
+        const livros = await Livro.find(query).sort({ createdAt: -1 });
+        console.log(`Livros encontrados: ${livros.length}`); // Log do número de livros encontrados
         res.status(200).json(livros);
     } catch (error) {
+        console.error('Erro ao buscar livros:', error); // Log do erro
         res.status(500).json({ message: 'Erro ao buscar livros', error });
     }
 });
 
+<<<<<<< HEAD
 /* rota Nath-quantidade de livros cadastrados */
 router.get('/api/livros/count', async (req, res) => {
     try {
@@ -243,6 +241,8 @@ router.get('/api/livros/emprestados/count', async (req, res) => {
         res.status(500).json({ message: 'Erro ao contar livros emprestados', error });
     }
 });
+=======
+>>>>>>> 8be173115f08aee35956b656b347e689343cbe77
 
 /* Usando o router */
 app.use(router);
