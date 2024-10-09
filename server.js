@@ -18,8 +18,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 mongoose.connect(MONGO_URI, {
-    useUnifiedTopology: true,
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
     .then(() => console.log('Conectado ao MongoDB'))
     .catch(err => console.error('Erro ao conectar ao MongoDB', err));
@@ -37,10 +37,20 @@ const livroSchema = new mongoose.Schema({
     nomeLivro: { type: String, required: true },
     autor: { type: String, required: true },
     genero: { type: String, required: true },
-    dataLancamento: { type: Date, required: true }, 
-    qtdCopias: { type: Number, required: true }, 
+    dataLancamento: { type: Date, required: true },
+    qtdCopias: { type: Number, required: true, default: 1 },
     image: { type: String, required: true },
 });
+
+/* Definindo o schema do Emprestimo */
+const emprestimoSchema = new mongoose.Schema({
+    cliente: { type: mongoose.Schema.Types.ObjectId, ref: 'Cliente', required: true },
+    livros: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Livro', required: true }],
+    dataEmprestimo: { type: Date, default: Date.now },
+});
+
+/* Criando o modelo Emprestimo*/
+const Emprestimo = mongoose.model('Emprestimo', emprestimoSchema);
 
 /* Criando o modelo Cliente */
 const Cliente = mongoose.model('Cliente', clienteSchema);
@@ -127,15 +137,15 @@ router.post('/api/clientes', async (req, res) => {
 
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
-  const { limit } = req.query; 
+    const { limit } = req.query;
     try {
         let clientes;
         // Se "limit" estiver definido, limitamos o número de clientes
         //  A função .sort({ createdAt: -1 }) organiza os clientes pelo campo de criação em ordem decrescente
         if (limit) {
-          clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
+            clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
         } else {
-          clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
+            clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
         }
         res.status(200).json(clientes);
     } catch (error) {
@@ -166,6 +176,69 @@ router.get("/api/livros", async (req, res) => {
         res.status(200).json(livros);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar livros', error });
+    }
+});
+
+/* Rota para cadastrar empréstimo */
+router.post('/api/emprestimos', async (req, res) => {
+    const { cliente, livros, dataEmprestimo } = req.body;
+
+    if (!cliente || !livros || !Array.isArray(livros) || livros.length === 0) {
+        return res.status(400).json({ message: 'Cliente e pelo menos um livro são obrigatórios.' });
+    }
+
+    try {
+        const clienteExistente = await Cliente.findById(cliente);
+        if (!clienteExistente) {
+            return res.status(404).json({ message: 'Cliente não encontrado.' });
+        }
+
+        const livrosUnicos = [...new Set(livros)];
+        if (livrosUnicos.length !== livros.length) {
+            return res.status(400).json({ message: 'Livros duplicados não são permitidos.' });
+        }
+
+        const livrosEncontrados = await Livro.find({ _id: { $in: livrosUnicos } });
+        if (livrosEncontrados.length !== livrosUnicos.length) {
+            return res.status(404).json({ message: 'Um ou mais livros não foram encontrados.' });
+        }
+
+        const indisponiveis = livrosEncontrados.filter(livro => livro.qtdCopias < 1);
+        if (indisponiveis.length > 0) {
+            return res.status(400).json({
+                message: 'Alguns livros não estão disponíveis para empréstimo.',
+                livros: indisponiveis.map(livro => livro.nomeLivro)
+            });
+        }
+
+        // Atualizar a quantidade de cópias disponíveis
+        await Promise.all(livrosEncontrados.map(livro => {
+            livro.qtdCopias -= 1;
+            return livro.save();
+        }));
+
+        // Criar o empréstimo
+        const novoEmprestimo = new Emprestimo({ cliente, livros: livrosUnicos, dataEmprestimo });
+        await novoEmprestimo.save();
+
+        return res.status(201).json(novoEmprestimo);
+    } catch (error) {
+        console.error('Erro no processo de criação de empréstimo:', error);
+        return res.status(500).json({ message: 'Erro ao criar empréstimo', error: error.message });
+    }
+});
+
+
+/* Rota para obter empréstimos */
+router.get('/api/emprestimos', async (req, res) => {
+    try {
+        const emprestimos = await Emprestimo.find()
+            .populate('cliente')
+            .populate('livros')
+            .sort({ data: -1 });
+        res.status(200).json(emprestimos);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar empréstimos.', error });
     }
 });
 
