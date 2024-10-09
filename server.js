@@ -225,7 +225,6 @@ router.get("/api/livros", async (req, res) => {
 });
 
 /* rota Nath-quantidade de livros cadastrados */
-
 router.get('/api/livros/count', async (req, res) => {
     try {
         const count = await Livro.countDocuments();
@@ -236,7 +235,6 @@ router.get('/api/livros/count', async (req, res) => {
 });
 
 /* rota para livros emprestados -Nath */
-
 router.get('/api/livros/emprestados/count', async (req, res) => {
     try {
         const count = await Livro.countDocuments({ emprestado: true }); // Conta livros onde "emprestado" é true
