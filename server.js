@@ -138,15 +138,45 @@ router.post('/api/clientes', async (req, res) => {
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
     const { limit } = req.query;
+    const { limit } = req.query;
     try {
         let clientes;
         // Se "limit" estiver definido, limitamos o número de clientes
         //  A função .sort({ createdAt: -1 }) organiza os clientes pelo campo de criação em ordem decrescente
         if (limit) {
             clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
+            clientes = await Cliente.find().sort({ createdAt: -1 }).limit(parseInt(limit));
         } else {
             clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
+            clientes = await Cliente.find().sort({ createdAt: -1 }); // Caso contrário, retorna todos
         }
+        res.status(200).json(clientes);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar clientes', error });
+    }
+});
+
+/* Rota para buscar clientes */
+router.get("/api/clientes", async (req, res) => {
+    const { search } = req.query; // Obtém o termo de busca
+
+    try {
+        let query = {}; // Inializamos a query vazia
+
+        // Se o termo de busca for concedido, adicionamos na query
+        if (search) {
+            query = {
+                $or: [
+                    { nome: { $regex: search, $options: 'i' } }, // Busca por nome
+                    { sobrenome: { $regex: search, $options: 'i' } }, // Busca por sobrenome
+                    { email: { $regex: search, $options: 'i' } }, // Busca por email
+                ]
+            };
+        }
+
+        // Consultamos o banco de dados com a query montada
+        const clientes = await Cliente.find(query).sort({ createAt: -1 }); // Organiza por data de criação em ordem decrescente
+
         res.status(200).json(clientes);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar clientes', error });
@@ -169,12 +199,12 @@ router.post('/api/livros', async (req, res) => {
     }
 });
 
-/* Rota para obter livros */
 router.get("/api/livros", async (req, res) => {
     try {
         const livros = await Livro.find();
         res.status(200).json(livros);
     } catch (error) {
+        console.error('Erro ao buscar livros:', error); // Log do erro
         res.status(500).json({ message: 'Erro ao buscar livros', error });
     }
 });
