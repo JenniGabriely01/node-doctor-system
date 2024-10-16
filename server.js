@@ -272,6 +272,32 @@ router.get('/api/emprestimos', async (req, res) => {
     }
 });
 
+// Rota para devolução do empréstimo
+router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
+    const emprestimoId = req.params.id;
+    const { livros } = req.body;
+
+    try {
+        // Remover o empréstimo
+        const emprestimo = await Emprestimo.findByIdAndDelete(emprestimoId);
+        if (!emprestimo) {
+            return res.status(404).json({ message: 'Empréstimo não encontrado' });
+        }
+
+        // Atualizar a quantidade de cópias dos livros devolvidos
+        await Promise.all(livros.map(async (livroId) => {
+            const livro = await Livro.findById(livroId);
+            livro.qtdCopias += 1; // Devolvendo a cópia ao banco
+            await livro.save();
+        }));
+
+        res.status(200).json({ message: 'Devolução processada com sucesso.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao processar devolução.', error });
+    }
+});
+
+
 /* Usando o router */
 app.use(router);
 
