@@ -7,58 +7,69 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
+const User = require('./models/User');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mydatabase';
+const MONGO_URI = process.env.DB || 'mongodb://localhost:27017/mydatabase';
+const JWT_SECRET = process.env.JWTPRIVATEKEY || 'default_secret';
+const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(bodyParser.json());
 
-
 mongoose.connect(MONGO_URI, {
-    useUnifiedTopology: true,
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
-.then(() => console.log('Conectado ao MongoDB'))
-.catch(err => console.error('Erro ao conectar ao MongoDB', err));
+    .then(() => console.log('Conectado ao MongoDB'))
+    .catch(err => console.error('Erro ao conectar ao MongoDB', err));
+
+// Schemas
+const clienteSchema = new mongoose.Schema({
+    nome: { type: String, required: true },
+    sobrenome: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    telefone: { type: String, required: true },
+}, { timestamps: true });
+
+const livroSchema = new mongoose.Schema({
+    nomeLivro: { type: String, required: true },
+    autor: { type: String, required: true },
+    genero: { type: String, required: true },
+    dataLancamento: { type: Date, required: true },
+    qtdCopias: { type: Number, required: true, default: 1 },
+    image: { type: String, required: true },
+});
+
+const emprestimoSchema = new mongoose.Schema({
+    cliente: { type: mongoose.Schema.Types.ObjectId, ref: 'Cliente', required: true },
+    livros: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Livro', required: true }],
+    dataEmprestimo: { type: Date, default: Date.now },
+});
+
+const Emprestimo = mongoose.model('Emprestimo', emprestimoSchema);
+const Cliente = mongoose.model('Cliente', clienteSchema);
+const Livro = mongoose.model('Livro', livroSchema);
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true }
 });
 
-
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
-        this.password = await bcrypt.hash(this.password, 10);
+        this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
     }
     next();
 });
 
-const User = mongoose.model('User', userSchema);
-
-
-async function criarUsuario() {
-    const email = 'admin@example.com';
-    const plainPassword = 'adminpassword';
-
-    try {
-        const existingUser = await User.findOne({ email });
-        if (!existingUser) {
-            const newUser = new User({ email, password: plainPassword });
-            await newUser.save();
-            console.log('Usuário pré-cadastrado criado com sucesso');
-        } else {
-            console.log('Usuário já existe');
-        }
-    } catch (error) {
-        console.error('Erro ao criar usuário pré-cadastrado:', error);
-    }
-}
-
-criarUsuario();
-
-
+// Rota de login
 app.post('/login', [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres')
@@ -72,14 +83,13 @@ app.post('/login', [
 
     try {
         const user = await User.findOne({ email });
-
         if (!user) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (isPasswordValid) {
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
             res.status(200).json({ message: 'Login bem-sucedido', token });
         } else {
             res.status(400).json({ error: 'Email ou senha incorretos' });
@@ -90,33 +100,154 @@ app.post('/login', [
     }
 });
 
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+// Middleware de autenticação
+const authMiddleware = (req, res, next) => {
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
 
-    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+    if (!token) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+    }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ error: 'Token inválido' });
-        req.user = user;
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Token inválido' });
+        }
+        req.user = decoded;
         next();
     });
-}
+};
 
-
-app.get('/public', (req, res) => {
-    res.status(200).json({ message: 'Essa é uma rota pública' }); //
-    
+// Rota para validar token
+app.get('/validate', authMiddleware, (req, res) => {
+    res.status(200).json({ message: 'Token válido', user: req.user });
 });
 
-app.get('/protected', authenticateToken, (req, res) => {
-    res.status(200).json({ message: 'Acesso concedido', user: req.user });
+// Rota para cadastrar cliente
+app.post('/api/clientes', async (req, res) => {
+    const { nome, sobrenome, email, telefone } = req.body;
+
+    try {
+        const clienteExistente = await Cliente.findOne({ email });
+        if (clienteExistente) {
+            return res.status(400).json({ message: 'E-mail já cadastrado.' });
+        }
+
+        const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
+        await novoCliente.save();
+
+        res.status(201).json(novoCliente);
+    } catch (error) {
+        console.error('Erro ao cadastrar cliente:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'E-mail já cadastrado.' });
+        }
+        res.status(500).json({ message: "Erro ao cadastrar cliente", error });
+    }
 });
 
-app.get('/Home', authenticateToken, (req, res) => {
-    res.status(200).json({ message: 'Essa é uma rota protegida' });
+// Rota para buscar todos os clientes
+app.get('/api/clientes', async (req, res) => {
+    try {
+        const clientes = await Cliente.find();
+        res.json(clientes);
+    } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+        res.status(500).json({ message: 'Erro ao buscar clientes' });
+    }
 });
 
+// Rota para cadastrar livro
+app.post('/api/livros', async (req, res) => {
+    const { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
+
+    if (!nomeLivro || !autor || !genero || !dataLancamento || !qtdCopias || !image) {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios." });
+    }
+
+    try {
+        const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias, image });
+        await novoLivro.save();
+        res.status(201).json(novoLivro);
+    } catch (error) {
+        console.error('Erro ao cadastrar livro:', error);
+        res.status(500).json({ message: "Erro ao cadastrar livro", error });
+    }
+});
+
+// Rota para buscar livros
+app.get('/api/livros', async (req, res) => {
+    const { search } = req.query;
+
+    try {
+        const livros = search
+            ? await Livro.find({
+                $or: [
+                    { nomeLivro: { $regex: search, $options: 'i' } },
+                    { autor: { $regex: search, $options: 'i' } }
+                ]
+            })
+            : await Livro.find();
+
+        res.status(200).json(livros);
+    } catch (error) {
+        console.error('Erro ao buscar livros:', error);
+        res.status(500).json({ message: 'Erro ao buscar livros' });
+    }
+});
+
+// Rota para contar livros
+app.get('/api/livros/count', async (req, res) => {
+    try {
+        const count = await Livro.countDocuments();
+        res.status(200).json({ count });
+    } catch (error) {
+        console.error('Erro ao contar livros:', error);
+        res.status(500).json({ message: 'Erro ao contar livros' });
+    }
+});
+
+// Rota para contar livros emprestados
+app.get('/api/livros/emprestados/count', async (req, res) => {
+    try {
+        const count = await Emprestimo.countDocuments();
+        res.status(200).json({ count });
+    } catch (error) {
+        console.error('Erro ao contar livros emprestados:', error);
+        res.status(500).json({ message: 'Erro ao contar livros emprestados' });
+    }
+});
+
+// Rota para buscar todos os empréstimos
+app.get('/api/emprestimos', async (req, res) => {
+    try {
+        const emprestimos = await Emprestimo.find()
+            .populate('cliente', 'nome sobrenome')
+            .populate('livros', 'nomeLivro');
+
+        console.log('Empréstimos encontrados:', emprestimos); // Log para verificar os empréstimos
+
+        res.json(emprestimos);
+    } catch (error) {
+        console.error('Erro ao buscar empréstimos:', error);
+        res.status(500).json({ message: 'Erro ao buscar empréstimos' });
+    }
+});
+
+// Rota para cadastrar empréstimos
+app.post('/api/emprestimos', async (req, res) => {
+    const { cliente, livros } = req.body;
+
+    try {
+        const novoEmprestimo = new Emprestimo({ cliente, livros });
+        await novoEmprestimo.save();
+        res.status(201).json(novoEmprestimo);
+    } catch (error) {
+        console.error('Erro ao realizar empréstimo:', error);
+        res.status(500).json({ message: "Erro ao realizar empréstimo", error });
+    }
+});
+
+// Inicia o servidor
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });

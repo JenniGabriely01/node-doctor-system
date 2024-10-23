@@ -1,16 +1,20 @@
 const jwt = require('jsonwebtoken');
-const { jwtSecret } = require('../config/keys');
+const JWT_SECRET = process.env.JWTPRIVATEKEY || 'default_secret';
 
-module.exports = (req, res, next) => {
-    const token = req.header('Authorization')?.split(' ')[1];
+const authMiddleware = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
 
-    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+    if (!token) {
+        return res.status(403).json({ error: 'Token não fornecido.' });
+    }
 
-    try {
-        const decoded = jwt.verify(token, jwtSecret);
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Token inválido.' });
+        }
         req.user = decoded;
         next();
-    } catch (err) {
-        res.status(403).json({ error: 'Token inválido' });
-    }
+    });
 };
+
+module.exports = authMiddleware;
