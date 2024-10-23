@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWTPRIVATEKEY || 'default_secret';
 const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '100mb' }));
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
