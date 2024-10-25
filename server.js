@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const cors = require('cors');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
@@ -13,6 +15,15 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.DB || 'mongodb://localhost:27017/mydatabase';
 const JWT_SECRET = process.env.JWTPRIVATEKEY || 'default_secret';
 const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
+
+/* Constantes para envio de e-mail */
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
+const REFRESH_TOKEN = '1//04FmPI23ZApuTCgYIARAAGAQSNwF-L9IrFHALJstx68pDTDEIMd9JAMan5l8W41JptzhucyxGm2JyfQejJ25kMf2TAeIKaVNPYZY';
+
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN })
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
@@ -72,25 +83,68 @@ userSchema.pre('save', async function (next) {
 
 const User = mongoose.model('User', userSchema);
 
-async function criarUsuario() {
-    const email = 'admin@example.com';
-    const plainPassword = 'adminpassword';
-
+/* Função para envio de e-mail */
+async function sendMail(mailOptions) {
     try {
-        const existingUser = await User.findOne({ email });
-        if (!existingUser) {
-            const newUser = new User({ email, password: plainPassword });
-            await newUser.save();
-            console.log('Usuário pré-cadastrado criado com sucesso');
-        } else {
-            console.log('Usuário já existe');
-        }
+        const accessToken = await oAuth2Client.getAccessToken();
+
+        const transport = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                type: 'OAuth2',
+                user: 'owlslibrarysuporte@gmail.com',
+                clientId: CLIENT_ID,
+                clientSecret: CLIENT_SECRET,
+                refreshToken: REFRESH_TOKEN,
+                accessToken: accessToken
+            }
+        });
+
+        const result = await transport.sendMail(mailOptions);
+        return result;
+
     } catch (error) {
-        console.error('Erro ao criar usuário pré-cadastrado:', error);
+        console.log("Erro ao enviar e-mail", error);
+        throw error; // Lançar o erro para lidar com ele na rota, caso ocorra
     }
 }
 
-criarUsuario();
+/* Rota para cadastrar cliente */
+router.post('/api/clientes', async (req, res) => {
+    const { nome, sobrenome, email, telefone } = req.body;
+    try {
+        const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
+        await novoCliente.save();
+
+        // Configurar as opções de e-mail com os dados do cliente
+        const mailOptions = {
+            from: 'owlslibrarysuporte@gmail.com',
+            to: email, // Enviar o e-mail para o cliente recém-cadastrado
+            subject: 'Bem-vindo à nossa plataforma!',
+            text: `Olá ${nome}, obrigado por se cadastrar na nossa plataforma!`,
+            html: `
+                <div style="font-family: Arial, sans-serif; color: #333;">
+                    <h1 style="color: #8C2A2A;">Bem-vindo, ${nome}!</h1>
+                    <p>Estamos felizes em informar que seu cadastro foi realizado com sucesso. </p>
+                    <p>Agora você faz parte de nossa comunidade e poderá usufruir de nossos serviços,</p>
+                    <p>como empréstimo de livros e acesso a novidades da biblioteca.</p>
+                    <br>
+                    <p>Em caso de dúvidas, estamos à disposição. Boas leituras!</p>
+                    <br>
+                    <p>Atenciosamente,</p>
+                    <p>Equipe Owl's Library</p>
+                    <br>
+                </div>
+            `,
+        };
+
+        // Enviar o e-mail
+        await sendMail(mailOptions);
+        res.status(201).json(novoCliente);
+    } catch (error) {
+        res.status(400).json({ message: "Erro ao cadastrar cliente", error });
+    }
+});
 
 // Rota de login
 app.post('/login', [
@@ -135,10 +189,12 @@ router.post('/api/clientes', async (req, res) => {
     }
 });
 
+
+
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
     const { limit } = req.query;
-    
+
     try {
         let clientes;
         // Se "limit" estiver definido, limitamos o número de clientes
@@ -305,3 +361,4 @@ app.use(router);
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
+
