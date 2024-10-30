@@ -123,18 +123,31 @@ router.post('/api/clientes', async (req, res) => {
             subject: 'Bem-vindo à nossa plataforma!',
             text: `Olá ${nome}, obrigado por se cadastrar na nossa plataforma!`,
             html: `
-                <div style="font-family: Arial, sans-serif; color: #333;">
-                    <h1 style="color: #8C2A2A;">Bem-vindo, ${nome}!</h1>
-                    <p>Estamos felizes em informar que seu cadastro foi realizado com sucesso. </p>
-                    <p>Agora você faz parte de nossa comunidade e poderá usufruir de nossos serviços,</p>
-                    <p>como empréstimo de livros e acesso a novidades da biblioteca.</p>
-                    <br>
-                    <p>Em caso de dúvidas, estamos à disposição. Boas leituras!</p>
-                    <br>
-                    <p>Atenciosamente,</p>
-                    <p>Equipe Owl's Library</p>
-                    <br>
-                </div>
+                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
+                    <div>
+                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Bem-vindo, ${nome}!</h1>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                            Estamos felizes em informar que seu cadastro foi realizado com sucesso. <br>
+                            Agora você faz parte de nossa comunidade e poderá usufruir de nossos <br>
+                            serviços, como empréstimo de livros e acesso a novidades da biblioteca.
+                        </p>
+                        <p style="font-size: 1.25vw; margin-bottom: 2vw;">Em caso de dúvidas, estamos à disposição. Boas leituras!</p>
+                            <p style="font-size: 1.25vw;">
+                                Atenciosamente, <br>
+                                Equipe Owl's Library.
+                            </p>
+                    </div>
+                    <footer>
+                        <div>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                            <p style="font-size: 1.25vw;">
+                                E-mail: owlslibrarysuporte@gmail.com <br>
+                                Telefone: (11) 99965-2500
+                            </p>
+                        </div>
+                    </footer>
+                </body>
             `,
         };
 

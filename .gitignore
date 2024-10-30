@@ -1,3 +1,5 @@
+# Ignora o envio da pasta 'node_modules'
 node_modules
 
+# Ignora o envio do arquivo '.env'
 .env
