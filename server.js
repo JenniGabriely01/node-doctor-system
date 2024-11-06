@@ -7,11 +7,11 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
-const User = require('./models/User');
+const User = require('./models/User'); // Certifique-se de que este arquivo exporta o modelo de usuário
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.DB || 'mongodb://localhost:27017/mydatabase';
+const MONGO_URI = process.env.DB || 'mongodb+srv://Hiq:Marchini08@mycluster.vxjsk.mongodb.net/OwlsLibrary?retryWrites=true&w=majority&appName=MyCluster';
 const JWT_SECRET = process.env.JWTPRIVATEKEY || 'default_secret';
 const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 
@@ -27,7 +27,10 @@ mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-    .then(() => console.log('Conectado ao MongoDB'))
+    .then(() => {
+        console.log('Conectado ao MongoDB');
+        createAdminUser(); // Função para criar o usuário admin ao conectar
+    })
     .catch(err => console.error('Erro ao conectar ao MongoDB', err));
 
 // Schemas
@@ -68,6 +71,28 @@ userSchema.pre('save', async function (next) {
     }
     next();
 });
+
+const User = mongoose.model('User', userSchema); // Modelo para o usuário
+
+// Função para criar o usuário admin
+const createAdminUser = async () => {
+    const adminEmail = "admin@example.com";
+    const adminPassword = "adminpassword";
+
+    try {
+        const existingAdmin = await User.findOne({ email: adminEmail });
+        if (!existingAdmin) {
+            const hashedPassword = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+            const adminUser = new User({ email: adminEmail, password: hashedPassword });
+            await adminUser.save();
+            console.log("Usuário admin criado com sucesso.");
+        } else {
+            console.log("Usuário admin já existe.");
+        }
+    } catch (error) {
+        console.error("Erro ao criar usuário admin:", error);
+    }
+};
 
 // Rota de login
 app.post('/login', [
