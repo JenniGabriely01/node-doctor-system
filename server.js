@@ -20,7 +20,7 @@ const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
-const REFRESH_TOKEN = '1//04FmPI23ZApuTCgYIARAAGAQSNwF-L9IrFHALJstx68pDTDEIMd9JAMan5l8W41JptzhucyxGm2JyfQejJ25kMf2TAeIKaVNPYZY';
+const REFRESH_TOKEN = '1//04FSTTcbQ-5gqCgYIARAAGAQSNwF-L9IrWLwEA5RxCmyuiuvac6D0tUGQW224JKa7A6e8aknGvTMPVUVy73UtCkKIla1bmI67eMQ';
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN })
