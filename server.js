@@ -109,6 +109,107 @@ async function sendMail(mailOptions) {
     }
 }
 
+/* --------- rotas para o dashboard ---------- */
+
+// Rota para obter os autores mais emprestados com numeração 
+router.get('/api/autores-principais', async (req, res) => {
+    try {
+        const autoresQueMaisSaem = await Emprestimo.aggregate([
+            { $unwind: "$livros" },
+            {
+                $lookup: {
+                    from: "livros",
+                    localField: "livros",
+                    foreignField: "_id",
+                    as: "livrosInfo"
+                }
+            },
+            { $unwind: "$livrosInfo" },
+            { $group: { _id: "$livrosInfo.autor", totalEmprestimos: { $sum: 1 } } },
+            { $sort: { totalEmprestimos: -1 } },
+            { $limit: 4 }
+        ]);
+
+        // Adicionando numeração a cada item do array de gêneros
+        const autoresNumerados = autoresQueMaisSaem.map((autor, index) => ({
+            posicao: index + 1,
+            autor: autor._id,
+            totalEmprestimos: autor.totalEmprestimos
+        }));
+
+        res.status(200).json(autoresNumerados);
+    } catch (error) {
+        console.error('Erro ao buscar autores mais emprestados:', error);
+        res.status(500).json({ message: 'Erro ao buscar autores mais emprestados', error });
+    }
+})
+
+// Rota para obter os gêneros mais emprestados com numeração
+router.get('/api/generos-principais', async (req, res) => {
+    try {
+        const generosMaisEmprestados = await Emprestimo.aggregate([
+            { $unwind: "$livros" },
+            {
+                $lookup: {
+                    from: "livros",
+                    localField: "livros",
+                    foreignField: "_id",
+                    as: "livroInfo"
+                }
+            },
+            { $unwind: "$livroInfo" },
+            { $group: { _id: "$livroInfo.genero", totalEmprestimos: { $sum: 1 } } },
+            { $sort: { totalEmprestimos: -1 } },
+            { $limit: 4 } // Número de gêneros a ser exibido
+        ]);
+
+        // Adicionando numeração a cada item do array de gêneros
+        const generosNumerados = generosMaisEmprestados.map((genero, index) => ({
+            posicao: index + 1,
+            genero: genero._id,
+            totalEmprestimos: genero.totalEmprestimos
+        }));
+
+        res.status(200).json(generosNumerados);
+    } catch (error) {
+        console.error('Erro ao buscar gêneros mais emprestados:', error);
+        res.status(500).json({ message: 'Erro ao buscar gêneros mais emprestados', error });
+    }
+});
+
+router.get('/api/clientes-principais', async (req, res) => {
+    try {
+        const clientesQueMaisEmprestam = await Emprestimo.aggregate([
+            { $unwind: "$cliente" },
+            {
+                $lookup: {
+                    from: 'clientes',
+                    localField: 'cliente',
+                    foreignField: '_id',
+                    as: 'clienteInfo'
+                }
+            },
+            { $unwind: "$clienteInfo" },
+            { $group: { _id: "$clienteInfo.nome", totalClientes: { $sum: 1 } } },
+            { $sort: { totalClientes: -1 } },
+            { $limit: 4 }
+        ]);
+
+
+        const clienteNumerados = clientesQueMaisEmprestam.map((cliente, index) => ({
+            posicao: index + 1,
+            cliente: cliente._id,
+            totalClientes: cliente.totalClientes
+        }));
+
+        res.status(200).json(clienteNumerados);
+    } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+        res.status(500).json({ message: 'Erro ao buscar clientes', error });
+    }
+});
+
+
 /* Rota para cadastrar cliente */
 router.post('/api/clientes', async (req, res) => {
     const { nome, sobrenome, email, telefone } = req.body;
@@ -201,8 +302,6 @@ router.post('/api/clientes', async (req, res) => {
         res.status(400).json({ message: "Erro ao cadastrar cliente", error });
     }
 });
-
-
 
 /* Rota para obter clientes */
 router.get("/api/clientes", async (req, res) => {
