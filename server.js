@@ -20,7 +20,7 @@ const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
-const REFRESH_TOKEN = '1//04FSTTcbQ-5gqCgYIARAAGAQSNwF-L9IrWLwEA5RxCmyuiuvac6D0tUGQW224JKa7A6e8aknGvTMPVUVy73UtCkKIla1bmI67eMQ';
+const REFRESH_TOKEN = '1//04o4iZ89yvdKNCgYIARAAGAQSNwF-L9Ir0jBazI68ZPN3vORZOsd3bk7MAhsVYvd8GyBN30jVHVGTrgUI8daXL7VKZNt9BxxQBX0';
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN })
@@ -419,6 +419,41 @@ router.post('/api/emprestimos', async (req, res) => {
         const novoEmprestimo = new Emprestimo({ cliente, livros: livrosUnicos, dataEmprestimo });
         await novoEmprestimo.save();
 
+        // Configurar as opções de e-mail para o cliente
+        const mailOptions = {
+            from: 'owlslibrarysuporte@gmail.com',
+            to: clienteExistente.email, // Enviar o e-mail para o cliente
+            subject: 'Seu empréstimo realizado com sucesso!',
+            html: `
+                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
+                    <div>
+                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Olá, ${clienteExistente.nome}!</h1>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                            Estamos felizes em informar que seu empréstimo foi registrado com sucesso. <br>
+                            Agora você pode desfrutar de sua leitura e aproveitar ao máximo o conteúdo que escolheu. <br>
+                            Não se esqueça de conferir o prazo para devolução e qualquer dúvida, estamos aqui para ajudar.
+                            <br><br>
+                            Atenciosamente, <br>
+                            Equipe Owl's Library.
+                        </p>
+                    </div>
+                    <footer>
+                        <div>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                            <p style="font-size: 1.25vw; color: #333; text-decoration: none;">
+                                E-mail: owlslibrarysuporte@gmail.com <br>
+                                Telefone: (11) 99965-2500
+                            </p>
+                        </div>
+                    </footer>
+                </body>  
+            `
+        };
+
+        // Enviar o e-mail
+        await sendMail(mailOptions);
+
         return res.status(201).json(novoEmprestimo);
     } catch (error) {
         console.error('Erro no processo de criação de empréstimo:', error);
@@ -439,7 +474,6 @@ router.get('/api/emprestimos', async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar empréstimos.', error });
     }
 });
-
 // Rota para devolução do empréstimo
 router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
     const emprestimoId = req.params.id;
@@ -459,9 +493,56 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
             await livro.save();
         }));
 
-        res.status(200).json({ message: 'Devolução processada com sucesso.' });
+        // Buscar o cliente relacionado ao empréstimo
+        const cliente = await Cliente.findById(emprestimo.cliente);
+        if (!cliente) {
+            return res.status(404).json({ message: 'Cliente não encontrado' });
+        }
+
+        // Configurar as opções de e-mail com os dados do cliente para a devolução
+        const mailOptions = {
+            from: 'owlslibrarysuporte@gmail.com',
+            to: cliente.email,
+            subject: 'Devolução de Empréstimo Concluída com Sucesso!',
+            html: `
+                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
+                    <div>
+                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Olá, ${cliente.nome}!</h1>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                            Agradecemos por devolver os livros que estavam em seu poder. <br>
+                            Esperamos que a leitura tenha sido enriquecedora e prazerosa! <br><br>
+
+                            Sempre que precisar de novas obras para explorar, nossa biblioteca <br>
+                            estará de portas abertas para você. Caso tenha qualquer dúvida, <br>
+                            nossa equipe estará à disposição para ajudar.
+                        </p>
+                        <p style="font-size: 1.25vw; margin-bottom: 2vw;">Até a próxima leitura!</p>
+                            <p style="font-size: 1.25vw;">
+                                Atenciosamente, <br>
+                                Equipe Owl's Library.
+                            </p>
+                    </div>
+                    <footer>
+                        <div>
+                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
+                            <p style="font-size: 1.25vw;">
+                                E-mail: owlslibrarysuporte@gmail.com <br>
+                                Telefone: (11) 99965-2500
+                            </p>
+                        </div>
+                    </footer>
+                </body>
+            `,
+        };
+
+        // Enviar o e-mail
+        await sendMail(mailOptions);
+
+        res.status(200).json({ message: 'Devolução processada com sucesso e e-mail enviado.' });
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao processar devolução.', error });
+        console.error('Erro ao processar devolução:', error);
+        res.status(500).json({ message: 'Erro ao processar devolução.', error: error.message });
     }
 });
 
