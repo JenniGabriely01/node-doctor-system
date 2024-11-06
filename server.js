@@ -58,6 +58,7 @@ const emprestimoSchema = new mongoose.Schema({
     cliente: { type: mongoose.Schema.Types.ObjectId, ref: 'Cliente', required: true },
     livros: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Livro', required: true }],
     dataEmprestimo: { type: Date, default: Date.now },
+    devolvido: { type: Boolean, default: false },
 });
 
 /* Criando o modelo Emprestimo*/
@@ -209,6 +210,33 @@ router.get('/api/clientes-principais', async (req, res) => {
     }
 });
 
+// Rota para contar empréstimos da última semana
+router.get('/api/emprestimos/last-week-count', async (req, res) => {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    try {
+        const count = await Emprestimo.countDocuments({ dataEmprestimo: { $gte: oneWeekAgo } });
+        res.status(200).json({ count });
+    } catch (error) {
+        console.error('Erro ao contar empréstimos da última semana:', error);
+        res.status(500).json({ message: 'Erro ao contar empréstimos da última semana', error });
+    }
+});
+
+// Rota para contar todos os empréstimos atrasados
+router.get('/api/emprestimos/atrasos-total', async (req, res) => {
+    try {
+        // Contar todos os empréstimos não devolvidos
+        const atrasos = await Emprestimo.countDocuments({
+            devolvido: false
+        });
+
+        res.status(200).json({ count: atrasos });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao contar empréstimos em atraso', error });
+    }
+});
 
 /* Rota para cadastrar cliente */
 router.post('/api/clientes', async (req, res) => {
