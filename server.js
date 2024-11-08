@@ -381,9 +381,11 @@ router.get("/api/clientes", async (req, res) => {
 
 /* Rota para cadastrar livro */
 router.post('/api/livros', async (req, res) => {
-    const { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
+    let { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
 
-    // Verificando os dados recebidos
+    // Remove espaços extras antes e depois do gênero
+    genero = genero.trim();
+
     console.log('Dados recebidos no POST /api/livros:', req.body);
 
     try {
@@ -394,6 +396,7 @@ router.post('/api/livros', async (req, res) => {
         res.status(400).json({ message: "Erro ao cadastrar livro", error });
     }
 });
+
 
 router.get("/api/livros", async (req, res) => {
     try {
