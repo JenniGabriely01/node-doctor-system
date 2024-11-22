@@ -229,6 +229,74 @@ router.get('/api/emprestimos/last-week-count', async (req, res) => {
     }
 });
 
+
+app.get('/api/livros-mais-emprestados', async (req, res) => {
+    try {
+        const livrosMaisEmprestados = await Emprestimo.aggregate([
+            { $unwind: '$livros' }, // Desenrola o array de livros
+            { $group: { _id: '$livros', count: { $sum: 1 } } }, // Agrupa por ID do livro
+            { $sort: { count: -1 } }, // Ordena do mais emprestado para o menos
+            { $limit: 4 },
+            {
+                $lookup: {
+                    from: 'livros', // Nome correto da coleção de livros
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'livro',
+                },
+            },
+            { $unwind: '$livro' }, // Desenrola o livro
+        ]);
+        res.json(livrosMaisEmprestados);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/livros-emprestados-semana', async (req, res) => {
+    const seteDiasAtras = new Date();
+    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+
+    try {
+        const livrosUltimos7Dias = await Emprestimo.aggregate([
+            { $match: { dataEmprestimo: { $gte: seteDiasAtras } } },
+            { $unwind: '$livros' }, // Desenrola o array de livros
+            { $group: { _id: '$livros', count: { $sum: 1 } } }, // Agrupa por ID do livro
+            { $lookup: { from: 'livros', localField: '_id', foreignField: '_id', as: 'livro' } },
+            { $unwind: '$livro' },
+            { $limit: 4 },
+            
+        ]);
+        res.json(livrosUltimos7Dias);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+app.get('/api/livros-menos-emprestados', async (req, res) => {
+    try {
+        const livrosMenosEmprestados = await Emprestimo.aggregate([
+            { $unwind: '$livros' }, // Desenrola o array de livros
+            { $group: { _id: '$livros', count: { $sum: 1 } } }, // Agrupa por ID do livro
+            { $sort: { count: 1 } }, // Ordena do menor para o maior
+            { $limit: 4 },
+            {
+                $lookup: {
+                    from: 'livros',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'livro',
+                },
+            },
+            { $unwind: '$livro' }, // Desenrola o livro
+        ]);
+        res.json(livrosMenosEmprestados);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Rota para contar todos os empréstimos atrasados
 router.get('/api/emprestimos/atrasos-total', async (req, res) => {
     try {
