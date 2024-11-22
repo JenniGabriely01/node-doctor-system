@@ -20,7 +20,7 @@ const SALT_ROUNDS = parseInt(process.env.SALT, 10) || 10;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
-const REFRESH_TOKEN = '1//04o4iZ89yvdKNCgYIARAAGAQSNwF-L9Ir0jBazI68ZPN3vORZOsd3bk7MAhsVYvd8GyBN30jVHVGTrgUI8daXL7VKZNt9BxxQBX0';
+const REFRESH_TOKEN = '1//046S3L1ySKS_UCgYIARAAGAQSNwF-L9IrX68W3S-3IH6rMiZxleVJ1oor90FK4yTFkPJIhlnxdETA-1ELNm817CZNmSbrvfQc_n8';
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN })
@@ -265,7 +265,7 @@ app.get('/api/livros-emprestados-semana', async (req, res) => {
             { $lookup: { from: 'livros', localField: '_id', foreignField: '_id', as: 'livro' } },
             { $unwind: '$livro' },
             { $limit: 4 },
-            
+
         ]);
         res.json(livrosUltimos7Dias);
     } catch (err) {
@@ -321,33 +321,29 @@ router.post('/api/clientes', async (req, res) => {
         // Configurar as opções de e-mail com os dados do cliente
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
-            to: email, // Enviar o e-mail para o cliente recém-cadastrado
+            to: email,
             subject: 'Bem-vindo à nossa plataforma!',
-            text: `Olá ${nome}, obrigado por se cadastrar na nossa plataforma!`,
             html: `
-                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
-                    <div>
-                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Bem-vindo, ${nome}!</h1>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h1 style="font-size: 24px; color: #000; margin-bottom: 16px; text-align: left;">Bem-vindo, ${nome}!</h1>
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="line-height: 1.6; color: #000; font-size: 16px; margin-bottom: 16px;">
                             Estamos felizes em informar que seu cadastro foi realizado com sucesso. <br>
-                            Agora você faz parte de nossa comunidade e poderá usufruir de nossos <br>
-                            serviços, como empréstimo de livros e acesso a novidades da biblioteca.
+                            Agora você faz parte de nossa comunidade e poderá usufruir de nossos serviços, como empréstimo de livros e acesso a novidades da biblioteca.
                         </p>
-                        <p style="font-size: 1.25vw; margin-bottom: 2vw;">Em caso de dúvidas, estamos à disposição. Boas leituras!</p>
-                            <p style="font-size: 1.25vw;">
-                                Atenciosamente, <br>
-                                Equipe Owl's Library.
-                            </p>
+                        <p style=" color: #000; font-size: 16px;">Em caso de dúvidas, estamos à disposição. Boas leituras!</p>
+                        <p style=" color: #000; font-size: 16px;">
+                            Atenciosamente, <br>
+                            Equipe Owl's Library.
+                        </p>
                     </div>
-                    <footer>
-                        <div>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                            <p style="font-size: 1.25vw;">
-                                E-mail: owlslibrarysuporte@gmail.com <br>
-                                Telefone: (11) 99965-2500
-                            </p>
-                        </div>
+                    <footer style="max-width: 600px; margin: 20px auto; text-align: left; font-size: 14px;">
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="color: #000;">
+                            E-mail: owlslibrarysuporte@gmail.com <br>
+                            Telefone: (11) 99965-2500
+                        </p>
                     </footer>
                 </body>
             `,
@@ -550,33 +546,33 @@ router.post('/api/emprestimos', async (req, res) => {
         // Configurar as opções de e-mail para o cliente
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
-            to: clienteExistente.email, // Enviar o e-mail para o cliente
+            to: clienteExistente.email,
             subject: 'Seu empréstimo realizado com sucesso!',
             html: `
-                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
-                    <div>
-                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Olá, ${clienteExistente.nome}!</h1>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h1 style="color: #000; font-size: 24px; margin-bottom: 16px; text-align: left;">Olá, ${clienteExistente.nome}!</h1>
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="color: #000; line-height: 1.6; font-size: 16px; margin-bottom: 16px;">
                             Estamos felizes em informar que seu empréstimo foi registrado com sucesso. <br>
                             Agora você pode desfrutar de sua leitura e aproveitar ao máximo o conteúdo que escolheu. <br>
                             Não se esqueça de conferir o prazo para devolução e qualquer dúvida, estamos aqui para ajudar.
-                            <br><br>
+                        </p>
+                        <p style="color: #000; font-size: 16px;">
                             Atenciosamente, <br>
                             Equipe Owl's Library.
                         </p>
                     </div>
-                    <footer>
-                        <div>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                            <p style="font-size: 1.25vw; color: #333; text-decoration: none;">
-                                E-mail: owlslibrarysuporte@gmail.com <br>
-                                Telefone: (11) 99965-2500
-                            </p>
-                        </div>
+                    <footer style="max-width: 600px; margin: 20px auto; text-align: left; font-size: 14px;">
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="color: #000;">
+                            E-mail: owlslibrarysuporte@gmail.com <br>
+                            Telefone: (11) 99965-2500
+                        </p>
                     </footer>
-                </body>  
-            `
+                </body>
+            `,
+
         };
 
         // Enviar o e-mail
@@ -633,35 +629,31 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
             to: cliente.email,
             subject: 'Devolução de Empréstimo Concluída com Sucesso!',
             html: `
-                <body style="overflow-x: hidden; padding: 0; font-family: Arial, sans-serif; color: #333;">
-                    <div>
-                        <h1 style="color: #333; font-size: 2.5vw; margin-bottom: 1vw;">Olá, ${cliente.nome}!</h1>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                        <p style="line-height: 2vw; margin-bottom: 2vw; font-size: 1.25vw;">
+                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h1 style="color: #000; font-size: 24px; margin-bottom: 16px; text-align: left;">Olá, ${cliente.nome}!</h1>
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="color: #000; line-height: 1.6; font-size: 16px; margin-bottom: 16px;">
                             Agradecemos por devolver os livros que estavam em seu poder. <br>
                             Esperamos que a leitura tenha sido enriquecedora e prazerosa! <br><br>
-
-                            Sempre que precisar de novas obras para explorar, nossa biblioteca <br>
-                            estará de portas abertas para você. Caso tenha qualquer dúvida, <br>
-                            nossa equipe estará à disposição para ajudar.
+                            Sempre que precisar de novas obras para explorar, nossa biblioteca estará de portas abertas para você. Caso tenha qualquer dúvida, nossa equipe estará à disposição para ajudar.
                         </p>
-                        <p style="font-size: 1.25vw; margin-bottom: 2vw;">Até a próxima leitura!</p>
-                            <p style="font-size: 1.25vw;">
-                                Atenciosamente, <br>
-                                Equipe Owl's Library.
-                            </p>
+                        <p style="color: #000; font-size: 16px;">Até a próxima leitura!</p>
+                        <p style="color: #000;font-size: 16px;">
+                            Atenciosamente, <br>
+                            Equipe Owl's Library.
+                        </p>
                     </div>
-                    <footer>
-                        <div>
-                            <hr style="margin: 0; width: 30vw; height: 0.05vw; background-color: #333;">
-                            <p style="font-size: 1.25vw;">
-                                E-mail: owlslibrarysuporte@gmail.com <br>
-                                Telefone: (11) 99965-2500
-                            </p>
-                        </div>
+                    <footer style="max-width: 600px; margin: 20px auto; text-align: left; font-size: 14px;">
+                        <hr style="margin: 10px 0; border: 0; height: 1px; background-color: #000;">
+                        <p style="color: #000;">
+                            E-mail: owlslibrarysuporte@gmail.com <br>
+                            Telefone: (11) 99965-2500
+                        </p>
                     </footer>
                 </body>
             `,
+
         };
 
         // Enviar o e-mail
