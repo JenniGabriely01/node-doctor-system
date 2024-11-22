@@ -25,7 +25,12 @@ const REFRESH_TOKEN = '1//04o4iZ89yvdKNCgYIARAAGAQSNwF-L9Ir0jBazI68ZPN3vORZOsd3b
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN })
 
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(bodyParser.json({ limit: '100mb' }));
 
 mongoose.connect(MONGO_URI, {
@@ -287,6 +292,30 @@ router.post('/api/clientes', async (req, res) => {
         res.status(400).json({ message: "Erro ao cadastrar cliente", error });
     }
 });
+
+// Middleware de autenticação
+const authMiddleware = (req, res, next) => {
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Token inválido' });
+        }
+        req.user = decoded;
+        next();
+    });
+};
+
+// Rota para validar token
+app.get('/validate', authMiddleware, (req, res) => {
+    res.status(200).json({ message: 'Token válido', user: req.user });
+});
+
+
 
 // Rota de login
 app.post('/login', [
