@@ -322,6 +322,7 @@ router.post('/api/clientes', async (req, res) => {
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
             to: email,
+            cc: 'owlslibrarysuporte@gmail.com',
             subject: 'Bem-vindo à nossa plataforma!',
             html: `
                 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
@@ -554,6 +555,7 @@ router.post('/api/emprestimos', async (req, res) => {
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
             to: clienteExistente.email,
+            cc: 'owlslibrarysuporte@gmail.com',
             subject: 'Seu empréstimo realizado com sucesso!',
             html: `
                 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
@@ -634,6 +636,7 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
             to: cliente.email,
+            cc: 'owlslibrarysuporte@gmail.com',
             subject: 'Devolução de Empréstimo Concluída com Sucesso!',
             html: `
                 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000;">
