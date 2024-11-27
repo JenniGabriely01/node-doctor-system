@@ -315,9 +315,16 @@ router.get('/api/emprestimos/atrasos-total', async (req, res) => {
 router.post('/api/clientes', async (req, res) => {
     const { nome, sobrenome, email, telefone } = req.body;
     try {
+        const clientesExistentes = await Cliente.findOne({
+            $or: [{ nome }, { email }]
+        });
+
+        if (clientesExistentes) {
+            return res.status(400).json({ message: 'Cliente já cadastrado com este nome ou e-mail' })
+        }
+
         const novoCliente = new Cliente({ nome, sobrenome, email, telefone });
         await novoCliente.save();
-
         // Configurar as opções de e-mail com os dados do cliente
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
