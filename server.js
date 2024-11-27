@@ -476,10 +476,12 @@ router.get("/api/clientes", async (req, res) => {
 router.post('/api/livros', async (req, res) => {
     let { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
 
-    // Remove espaços extras antes e depois do gênero
-    genero = genero.trim();
+    if (dataLancamento) {
+        const partesData = dataLancamento.split('-'); // Divide o formato yyyy-MM-dd
+        dataLancamento = new Date(partesData[0], partesData[1] - 1, partesData[2]); // Cria uma data no fuso local
+    }
 
-    console.log('Dados recebidos no POST /api/livros:', req.body);
+    genero = genero.trim();
 
     try {
         const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias, image });
@@ -494,12 +496,17 @@ router.post('/api/livros', async (req, res) => {
 router.get("/api/livros", async (req, res) => {
     try {
         const livros = await Livro.find();
-        res.status(200).json(livros);
+        const livrosFormatados = livros.map(livro => ({
+            ...livro._doc,
+            dataLancamento: livro.dataLancamento ? livro.dataLancamento.toISOString().split('T')[0] : null
+        }));
+        res.status(200).json(livrosFormatados);
     } catch (error) {
-        console.error('Erro ao buscar livros:', error); // Log do erro
+        console.error('Erro ao buscar livros:', error);
         res.status(500).json({ message: 'Erro ao buscar livros', error });
     }
 });
+
 
 /* Rota para cadastrar empréstimo */
 router.post('/api/emprestimos', async (req, res) => {
@@ -665,6 +672,7 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
         res.status(500).json({ message: 'Erro ao processar devolução.', error: error.message });
     }
 });
+
 
 
 /* Usando o router */
