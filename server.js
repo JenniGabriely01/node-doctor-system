@@ -561,6 +561,27 @@ router.get("/api/livros", async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar livros', error });
     }
 });
+
+// Rota para remover um livro
+app.delete('/api/livros/:id', async (req, res) => {
+    const livroId = req.params.id; // Obtém o ID do livro pela URL
+
+    try {
+        // Remover o livro do banco de dados
+        const livroRemovido = await Livro.findByIdAndDelete(livroId);
+
+        // Se o livro não for encontrado
+        if (!livroRemovido) {
+            return res.status(404).json({ message: 'Livro não encontrado' });
+        }
+
+        // Se a remoção for bem-sucedida
+        res.status(200).json({ message: 'Livro removido com sucesso' });
+    } catch (error) {
+        console.error('Erro ao remover livro:', error);
+        res.status(500).json({ message: 'Erro ao remover o livro', error: error.message });
+    }
+});
 /* === fim rota acervo === */
 
 
