@@ -459,6 +459,24 @@ router.get("/api/clientes", async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar clientes', error });
     }
 });
+
+/* Rota para contar os emprestimos de cada cliente */
+router.get('/api/emprestimos/count', async (req, res) => {
+    const { clienteId } = req.query;
+
+    if (!clienteId) {
+        return res.status(400).json({ message: "Cliente ID é obrigatório" });
+    }
+
+    try {
+        const count = await Emprestimo.countDocuments({ cliente: clienteId, devolvido: false });
+        res.status(200).json({ count });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao contar empréstimos', error });
+    }
+});
+
+
 /* === fim página de clientes === */
 
 
