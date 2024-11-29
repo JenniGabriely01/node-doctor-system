@@ -89,6 +89,40 @@ userSchema.pre('save', async function (next) {
 
 const User = mongoose.model('User', userSchema);
 
+/* === login === */
+// Rota de login
+app.post('/login', [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (isPasswordValid) {
+            const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+            res.status(200).json({ message: 'Login bem-sucedido', token });
+        } else {
+            res.status(400).json({ error: 'Email ou senha incorretos' });
+        }
+    } catch (error) {
+        console.error('Erro ao autenticar usuário:', error);
+        res.status(500).json({ error: 'Erro ao autenticar usuário' });
+    }
+});
+/* === fim do login ==== */
+
+/* === logica envio de e-mail === */
 /* Função para envio de e-mail */
 async function sendMail(mailOptions) {
     try {
@@ -114,9 +148,9 @@ async function sendMail(mailOptions) {
         throw error; // Lançar o erro para lidar com ele na rota, caso ocorra
     }
 }
+/* === fim rota de e-mail === */
 
-/* --------- rotas para o dashboard ---------- */
-
+/* === rotas para o dashboard ===*/
 // Rota para obter os autores mais emprestados com numeração 
 router.get('/api/autores-principais', async (req, res) => {
     try {
@@ -229,7 +263,6 @@ router.get('/api/emprestimos/last-week-count', async (req, res) => {
     }
 });
 
-
 app.get('/api/livros-mais-emprestados', async (req, res) => {
     try {
         const livrosMaisEmprestados = await Emprestimo.aggregate([
@@ -273,7 +306,6 @@ app.get('/api/livros-emprestados-semana', async (req, res) => {
     }
 });
 
-
 app.get('/api/livros-menos-emprestados', async (req, res) => {
     try {
         const livrosMenosEmprestados = await Emprestimo.aggregate([
@@ -310,7 +342,10 @@ router.get('/api/emprestimos/atrasos-total', async (req, res) => {
         res.status(500).json({ message: 'Erro ao contar empréstimos em atraso', error });
     }
 });
+/* ==== fim dashboard ==== */
 
+
+/* === página de clientes === */
 /* Rota para cadastrar cliente */
 router.post('/api/clientes', async (req, res) => {
     const { nome, sobrenome, email, telefone } = req.body;
@@ -362,61 +397,6 @@ router.post('/api/clientes', async (req, res) => {
         res.status(201).json(novoCliente);
     } catch (error) {
         res.status(400).json({ message: "Erro ao cadastrar cliente", error });
-    }
-});
-
-// Middleware de autenticação
-const authMiddleware = (req, res, next) => {
-    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ message: 'Token não fornecido' });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ message: 'Token inválido' });
-        }
-        req.user = decoded;
-        next();
-    });
-};
-
-// Rota para validar token
-app.get('/validate', authMiddleware, (req, res) => {
-    res.status(200).json({ message: 'Token válido', user: req.user });
-});
-
-
-
-// Rota de login
-app.post('/login', [
-    body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres')
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (isPasswordValid) {
-            const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
-            res.status(200).json({ message: 'Login bem-sucedido', token });
-        } else {
-            res.status(400).json({ error: 'Email ou senha incorretos' });
-        }
-    } catch (error) {
-        console.error('Erro ao autenticar usuário:', error);
-        res.status(500).json({ error: 'Erro ao autenticar usuário' });
     }
 });
 
@@ -479,7 +459,34 @@ router.get("/api/clientes", async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar clientes', error });
     }
 });
+/* === fim página de clientes === */
 
+
+/* === token === */
+// Middleware de autenticação
+const authMiddleware = (req, res, next) => {
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Token inválido' });
+        }
+        req.user = decoded;
+        next();
+    });
+};
+
+// Rota para validar token
+app.get('/validate', authMiddleware, (req, res) => {
+    res.status(200).json({ message: 'Token válido', user: req.user });
+});
+/* === fim do token === */
+
+/* === Rota acervo === */
 /* Rota para cadastrar livro */
 router.post('/api/livros', async (req, res) => {
     let { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
@@ -514,8 +521,10 @@ router.get("/api/livros", async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar livros', error });
     }
 });
+/* === fim rota acervo === */
 
 
+/* === rota de emprestimo === */
 /* Rota para cadastrar empréstimo */
 router.post('/api/emprestimos', async (req, res) => {
     const { cliente, livros, dataEmprestimo } = req.body;
@@ -614,6 +623,7 @@ router.get('/api/emprestimos', async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar empréstimos.', error });
     }
 });
+
 // Rota para devolução do empréstimo
 router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
     const emprestimoId = req.params.id;
@@ -682,8 +692,7 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
         res.status(500).json({ message: 'Erro ao processar devolução.', error: error.message });
     }
 });
-
-
+/* === fim da rota de emprestimo ===  */
 
 /* Usando o router */
 app.use(router);
