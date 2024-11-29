@@ -476,7 +476,29 @@ router.get('/api/emprestimos/count', async (req, res) => {
     }
 });
 
+/* Rota para contar a quantidade de livros emprestados */
+router.get('/api/estatisticas/livros-emprestados', async (req, res) => {
+    try {
+        const emprestimos = await Emprestimo.find();
+        const totalLivrosEmprestados = emprestimos.reduce((acc, emprestimo) => acc + emprestimo.livros.length, 0);
 
+        res.status(200).json({ totalLivrosEmprestados });
+    } catch (error) {
+        console.error('Erro ao calcular livros emprestados:', error);
+        res.status(500).json({ message: 'Erro ao calcular livros emprestados.', error });
+    }
+});
+
+/* Rota para contar os livros cadastrados */
+router.get('/api/livros/count', async (req, res) => {
+    try {
+        const count = await Livro.countDocuments();
+        res.status(200).json({ count });
+    } catch (error) {
+        console.error('Erro ao contar livros:', error);
+        res.status(500).json({ message: 'Erro ao contar livros', error });
+    }
+});
 /* === fim página de clientes === */
 
 
