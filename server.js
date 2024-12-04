@@ -53,6 +53,8 @@ const livroSchema = new mongoose.Schema({
     nomeLivro: { type: String, required: true },
     autor: { type: String, required: true },
     genero: { type: String, required: true },
+    isbn: { type: String, required: true },
+    editora: { type: String, required: true },
     dataLancamento: { type: Date, required: true },
     qtdCopias: { type: Number, required: true, default: 1 },
     image: { type: String, required: true },
@@ -529,7 +531,7 @@ app.get('/validate', authMiddleware, (req, res) => {
 /* === Rota acervo === */
 /* Rota para cadastrar livro */
 router.post('/api/livros', async (req, res) => {
-    let { nomeLivro, autor, genero, dataLancamento, qtdCopias, image } = req.body;
+    let { nomeLivro, autor, genero, isbn, editora, dataLancamento, qtdCopias, image } = req.body;
 
     if (dataLancamento) {
         const partesData = dataLancamento.split('-'); // Divide o formato yyyy-MM-dd
@@ -539,7 +541,7 @@ router.post('/api/livros', async (req, res) => {
     genero = genero.trim();
 
     try {
-        const novoLivro = new Livro({ nomeLivro, autor, genero, dataLancamento, qtdCopias, image });
+        const novoLivro = new Livro({ nomeLivro, autor, genero, isbn, editora, dataLancamento, qtdCopias, image });
         await novoLivro.save();
         res.status(201).json(novoLivro);
     } catch (error) {
