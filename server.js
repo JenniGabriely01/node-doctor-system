@@ -584,6 +584,27 @@ app.delete('/api/livros/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro ao remover o livro', error: error.message });
     }
 });
+
+// Rota para remover um cliente
+app.delete('/api/cliente/:id', async (req, res) => {
+    const clienteId = req.params.id;
+  
+    try {
+        // Remover o cliente do banco de dados
+        const clienteRemovido = await Cliente.findByIdAndDelete(clienteId);
+  
+        // Se o livro não for encontrado
+        if (!clienteRemovido) {
+            return res.status(404).json({ message: 'cliente não encontrado' });
+        }
+  
+        // Se a remoção for bem-sucedida
+        res.status(200).json({ message: 'cliente removido com sucesso' });
+    } catch (error) {
+        console.error('Erro ao remover o cliente:', error);
+        res.status(500).json({ message: 'Erro ao remover o cliente', error: error.message });
+    }
+  });
 /* === fim rota acervo === */
 
 
