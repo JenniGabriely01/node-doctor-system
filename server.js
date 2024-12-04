@@ -588,23 +588,23 @@ app.delete('/api/livros/:id', async (req, res) => {
 // Rota para remover um cliente
 app.delete('/api/cliente/:id', async (req, res) => {
     const clienteId = req.params.id;
-  
+
     try {
         // Remover o cliente do banco de dados
         const clienteRemovido = await Cliente.findByIdAndDelete(clienteId);
-  
+
         // Se o livro não for encontrado
         if (!clienteRemovido) {
             return res.status(404).json({ message: 'cliente não encontrado' });
         }
-  
+
         // Se a remoção for bem-sucedida
         res.status(200).json({ message: 'cliente removido com sucesso' });
     } catch (error) {
         console.error('Erro ao remover o cliente:', error);
         res.status(500).json({ message: 'Erro ao remover o cliente', error: error.message });
     }
-  });
+});
 /* === fim rota acervo === */
 
 
@@ -733,7 +733,19 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
             return res.status(404).json({ message: 'Cliente não encontrado' });
         }
 
-        // Configurar as opções de e-mail com os dados do cliente para a devolução
+        // Buscar o livro relacionado ao empréstimo
+        const livro = await Livro.findById(emprestimo.livros);
+        if (!livro) {
+            return res.status(404).json({ message: 'Livro não encontrado' });
+        }
+
+        // Configurando a data de devolução no e-mail enviado
+        const dataDevol = new Date().toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+
         const mailOptions = {
             from: 'owlslibrarysuporte@gmail.com',
             to: cliente.email,
@@ -747,6 +759,7 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
                         <p style="color: #000; line-height: 1.6; font-size: 16px; margin-bottom: 16px;">
                             Agradecemos por devolver os livros que estavam em seu poder. <br>
                             Esperamos que a leitura tenha sido enriquecedora e prazerosa! <br><br>
+                            Você realizou a devolução do livro "<strong>${livro.nomeLivro}</strong>", em: <strong>${dataDevol}</strong>. <br>
                             Sempre que precisar de novas obras para explorar, nossa biblioteca estará de portas abertas para você. Caso tenha qualquer dúvida, nossa equipe estará à disposição para ajudar.
                         </p>
                         <p style="color: #000; font-size: 16px;">Até a próxima leitura!</p>
@@ -764,7 +777,6 @@ router.put('/api/emprestimos/:id/devolucao', async (req, res) => {
                     </footer>
                 </body>
             `,
-
         };
 
         // Enviar o e-mail
