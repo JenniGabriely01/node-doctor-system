@@ -91,38 +91,186 @@ userSchema.pre('save', async function (next) {
 
 const User = mongoose.model('User', userSchema);
 
+
+const codeMap = new Map(); // Armazena códigos temporários
+
+const recoverySchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    codigo: { type: Number, required: true },
+    expiraEm: { type: Date, required: true }
+});
+const Recovery = mongoose.model('Recovery', recoverySchema);
+
+
+/* async function criarUsuario() {
+    try {
+        const email = "usuario@email.com";
+        const senha = "senha123";
+
+        // Verifique se o email já existe
+        const usuarioExistente = await User.findOne({ email });
+        if (usuarioExistente) {
+            console.log("Usuário com este email já existe:", usuarioExistente);
+            return;
+        }
+
+        // Criptografar a senha
+        const senhaCriptografada = await bcrypt.hash(senha, 10);
+
+        // Inserir o novo usuário
+        const novoUsuario = new User({ email, password: senhaCriptografada });
+        await novoUsuario.save();
+        console.log("Usuário criado com sucesso!");
+    } catch (error) {
+        console.error("Erro ao criar usuário:", error);
+    }
+}
+
+criarUsuario();
+ */
+
+
+
+
+/* async function criarUsuarioCorreto() {
+    const bcrypt = require("bcrypt");
+    const senha = "senha123"; // Substitua pela senha desejada
+
+    const senhaCriptografada = await bcrypt.hash(senha, 10);
+    console.log("Senha criptografada:", senhaCriptografada);
+
+    // Substitua a senha do usuário existente no banco
+    const usuarioAtualizado = await User.findOneAndUpdate(
+        { email: "usuario@email.com" },
+        { password: senhaCriptografada },
+        { new: true }
+    );
+
+    console.log("Usuário atualizado com sucesso:", usuarioAtualizado);
+}
+
+criarUsuarioCorreto();
+ */
+
+
+
 /* === login === */
 // Rota de login
-app.post('/login', [
-    body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres')
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
+app.post('/login', async (req, res) => {
     const { email, password } = req.body;
+
+    console.log("Tentativa de login:", { email, password });
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email e senha são obrigatórios." });
+    }
 
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
+            console.log("Usuário não encontrado.");
+            return res.status(404).json({ error: "Usuário não encontrado." });
         }
 
+        console.log("Hash armazenado no banco:", user.password);
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (isPasswordValid) {
-            const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
-            res.status(200).json({ message: 'Login bem-sucedido', token });
-        } else {
-            res.status(400).json({ error: 'Email ou senha incorretos' });
+        console.log("Senha válida:", isPasswordValid);
+
+        if (!isPasswordValid) {
+            return res.status(400).json({ error: "Email ou senha incorretos." });
         }
+
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "1h" });
+        res.status(200).json({ message: "Login bem-sucedido.", token });
     } catch (error) {
-        console.error('Erro ao autenticar usuário:', error);
-        res.status(500).json({ error: 'Erro ao autenticar usuário' });
+        console.error("Erro no login:", error);
+        res.status(500).json({ error: "Erro interno no servidor." });
     }
 });
+
 /* === fim do login ==== */
+app.post('/api/enviar-codigo', async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: "O campo de email é obrigatório." });
+    }
+
+    try {
+        const usuarioExistente = await User.findOne({ email });
+        if (!usuarioExistente) {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+
+        const codigo = Math.floor(100000 + Math.random() * 900000); // Gera um código de 6 dígitos
+        const expiraEm = new Date(Date.now() + 10 * 60 * 1000); // Expira em 10 minutos
+
+        // Salvar o código de recuperação no banco
+        await Recovery.findOneAndUpdate(
+            { email },
+            { email, codigo, expiraEm },
+            { upsert: true, new: true }
+        );
+
+        const mailOptions = {
+            from: 'owlslibrarysuporte@gmail.com',
+            to: email,
+            subject: 'Código de Recuperação',
+            text: `Seu código de recuperação é: ${codigo}. Este código expira em 10 minutos.`,
+        };
+
+        await sendMail(mailOptions);
+        res.status(200).json({ message: 'Código enviado com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao enviar o código:', error);
+        res.status(500).json({ error: 'Erro interno ao enviar o código.' });
+    }
+});
+
+app.post('/api/redefinir-senha', async (req, res) => {
+    const { email, codigo, novaSenha } = req.body;
+    console.log('Recebendo requisição para redefinir senha:', req.body);
+
+    if (!email || !codigo || !novaSenha) {
+        console.log('Campos ausentes na requisição.');
+        return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    }
+
+    try {
+        const registroRecuperacao = await Recovery.findOne({ email, codigo });
+        console.log('Registro de recuperação encontrado:', registroRecuperacao);
+
+        if (!registroRecuperacao) {
+            return res.status(400).json({ error: "Código inválido." });
+        }
+
+        if (registroRecuperacao.expiraEm < Date.now()) {
+            return res.status(400).json({ error: "Código expirado." });
+        }
+
+        const senhaCriptografada = await bcrypt.hash(novaSenha, SALT_ROUNDS);
+        console.log('Nova senha criptografada gerada.');
+
+        const usuarioAtualizado = await User.findOneAndUpdate(
+            { email },
+            { password: senhaCriptografada },
+            { new: true }
+        );
+
+        if (!usuarioAtualizado) {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+
+        await Recovery.deleteOne({ email, codigo });
+        res.status(200).json({ message: "Senha alterada com sucesso!" });
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({ error: "Erro interno ao redefinir senha." });
+    }
+});
+
+
 
 /* === logica envio de e-mail === */
 /* Função para envio de e-mail */
@@ -618,26 +766,33 @@ router.post('/api/emprestimos', async (req, res) => {
     }
 
     try {
+        // Validação do cliente
         const clienteExistente = await Cliente.findById(cliente);
         if (!clienteExistente) {
             return res.status(404).json({ message: 'Cliente não encontrado.' });
         }
 
+        // Validação dos livros
         const livrosUnicos = [...new Set(livros)];
-        if (livrosUnicos.length !== livros.length) {
-            return res.status(400).json({ message: 'Livros duplicados não são permitidos.' });
-        }
-
         const livrosEncontrados = await Livro.find({ _id: { $in: livrosUnicos } });
+
         if (livrosEncontrados.length !== livrosUnicos.length) {
             return res.status(404).json({ message: 'Um ou mais livros não foram encontrados.' });
+        }
+
+        const livrosInvalidos = livrosEncontrados.filter(livro => !livro.isbn || !livro.editora);
+        if (livrosInvalidos.length > 0) {
+            return res.status(400).json({
+                message: 'Alguns livros estão com informações incompletas.',
+                livros: livrosInvalidos.map(livro => livro.nomeLivro),
+            });
         }
 
         const indisponiveis = livrosEncontrados.filter(livro => livro.qtdCopias < 1);
         if (indisponiveis.length > 0) {
             return res.status(400).json({
                 message: 'Alguns livros não estão disponíveis para empréstimo.',
-                livros: indisponiveis.map(livro => livro.nomeLivro)
+                livros: indisponiveis.map(livro => livro.nomeLivro),
             });
         }
 
@@ -701,9 +856,11 @@ router.get('/api/emprestimos', async (req, res) => {
         const emprestimos = await Emprestimo.find()
             .populate('cliente')
             .populate('livros')
-            .sort({ data: -1 });
+            .sort({ dataEmprestimo: -1 });
+
         res.status(200).json(emprestimos);
     } catch (error) {
+        console.error('Erro ao buscar empréstimos:', error);
         res.status(500).json({ message: 'Erro ao buscar empréstimos.', error });
     }
 });
